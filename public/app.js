@@ -438,8 +438,10 @@ function renderMatchDetail(data, container) {
             <div class="detail-grid" style="flex-grow:1; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));">
                 <div class="detail-item"><div class="label">积分</div><div class="value">${formatNumber(selfInfo.iScore)}</div></div>
                 <div class="detail-item"><div class="label">击杀</div><div class="value">${selfInfo.iKills}</div></div>
+                <div class="detail-item"><div class="label">死亡</div><div class="value">${selfInfo.iDeaths}</div></div>
                 <div class="detail-item"><div class="label">Boss伤害</div><div class="value">${formatNumber(selfHunt.DamageTotalOnBoss || 0)}</div></div>
                 <div class="detail-item"><div class="label">小怪伤害</div><div class="value">${formatNumber(selfHunt.DamageTotalOnMobs || 0)}</div></div>
+                <div class="detail-item"><div class="label">金币</div><div class="value">${formatNumber(selfHunt.totalCoin || 0)}</div></div>
             </div>
         </div>`;
 
