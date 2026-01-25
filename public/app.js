@@ -190,14 +190,14 @@ async function loadStats() {
     }
 }
 
-async function loadMatchDetail(roomId, container) {
+async function loadMatchDetail(roomId, container, mode) {
     try {
         const res = await fetch(`${API_BASE}/detail?room_id=${roomId}`, {
             headers: { 'X-NZM-Cookie': state.cookie }
         });
         const json = await res.json();
         if (json.success && json.data) {
-            renderMatchDetail(json.data, container);
+            renderMatchDetail(json.data, container, mode);
             container.dataset.loaded = 'true';
         } else {
             container.innerHTML = `<div style="text-align:center;color:#ff4444">加载失败</div>`;
@@ -347,7 +347,7 @@ function renderMatchHistory(gameList) {
         const score = parseInt(game.iScore) || 0;
 
         return `
-            <div class="match-item ${isWin ? 'win' : 'loss'}" data-idx="${startIdx + idx}" data-roomid="${game.DsRoomId}">
+            <div class="match-item ${isWin ? 'win' : 'loss'}" data-idx="${startIdx + idx}" data-roomid="${game.DsRoomId}" data-mode="${mode}">
                 <div class="match-header">
                     <span class="match-mode">${mode}</span>
                     <span class="match-time">${startTime}</span>
@@ -371,10 +371,11 @@ function renderMatchHistory(gameList) {
             item.classList.toggle('expanded');
             if (item.classList.contains('expanded')) {
                 const roomId = item.dataset.roomid;
+                const mode = item.dataset.mode;
                 const detailContainer = document.getElementById(`detail-${roomId}`);
                 if (detailContainer && !detailContainer.dataset.loaded) {
                     detailContainer.innerHTML = '<div style="text-align:center;padding:1rem;">正在加载...</div>';
-                    await loadMatchDetail(roomId, detailContainer);
+                    await loadMatchDetail(roomId, detailContainer, mode);
                 }
             }
         });
@@ -394,16 +395,19 @@ function formatNumber(num) {
     return (num || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
 
-function renderMatchDetail(data, container) {
+function renderMatchDetail(data, container, mode) {
     const self = data.loginUserDetail;
     const teammates = (data.list || []).filter(p => p.nickname !== self.nickname);
     teammates.sort((a, b) => (parseInt(b.baseDetail.iScore) || 0) - (parseInt(a.baseDetail.iScore) || 0));
+
+    // Hide extra stats for Tower Defense (塔防)
+    const showExtra = mode !== '塔防';
 
     let html = '<div class="player-list">';
     teammates.forEach(p => {
         const info = p.baseDetail;
         const hunt = p.huntingDetails || {};
-        const hasExtra = (hunt.DamageTotalOnBoss > 0 || hunt.DamageTotalOnMobs > 0 || hunt.totalCoin > 0);
+        const hasExtra = showExtra && (hunt.DamageTotalOnBoss > 0 || hunt.DamageTotalOnMobs > 0 || hunt.totalCoin > 0);
         html += `
             <div class="player-item">
                 <img src="${decodeURIComponent(p.avatar)}" class="player-avatar" onerror="this.src='images/maps-304.png'">
@@ -439,9 +443,11 @@ function renderMatchDetail(data, container) {
                 <div class="detail-item"><div class="label">积分</div><div class="value">${formatNumber(selfInfo.iScore)}</div></div>
                 <div class="detail-item"><div class="label">击杀</div><div class="value">${selfInfo.iKills}</div></div>
                 <div class="detail-item"><div class="label">死亡</div><div class="value">${selfInfo.iDeaths}</div></div>
+                ${showExtra ? `
                 <div class="detail-item"><div class="label">Boss伤害</div><div class="value">${formatNumber(selfHunt.DamageTotalOnBoss || 0)}</div></div>
                 <div class="detail-item"><div class="label">小怪伤害</div><div class="value">${formatNumber(selfHunt.DamageTotalOnMobs || 0)}</div></div>
                 <div class="detail-item"><div class="label">金币</div><div class="value">${formatNumber(selfHunt.totalCoin || 0)}</div></div>
+                ` : ''}
             </div>
         </div>`;
 

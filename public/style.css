@@ -48,9 +48,11 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
+    /* Move from center to start */
     min-height: 100vh;
-    padding: 20px;
+    padding: 10vh 20px 20px;
+    /* Add top padding to position it */
 }
 
 .login-card {
@@ -606,4 +608,95 @@ button:hover {
     width: 20px;
     height: 20px;
     filter: invert(1);
+}
+
+/* Login Layout Updates - Asymmetric */
+.login-layout {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    margin-top: 2rem;
+}
+
+.login-card {
+    position: relative;
+    z-index: 2;
+    margin: 0 auto;
+    /* Ensure no flex shrink */
+    flex: 0 0 400px;
+    max-width: 400px;
+}
+
+.info-card-transparent {
+    position: absolute;
+    left: 50%;
+    top: 0;
+    margin-left: 230px;
+    /* 200px (half login card) + 30px gap */
+    width: 400px;
+    max-width: 400px;
+    background: rgba(30, 41, 59, 0.4);
+    backdrop-filter: blur(5px);
+    padding: 2rem;
+    border-radius: 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--text-secondary);
+    text-align: left;
+    height: auto;
+}
+
+.info-card-transparent h3 {
+    color: var(--text-primary);
+    margin-bottom: 1.5rem;
+    font-size: 1.25rem;
+    border-bottom: 2px solid var(--accent);
+    padding-bottom: 0.5rem;
+    display: inline-block;
+}
+
+/* ... list styles preserved ... */
+.info-card-transparent ul {
+    list-style: none;
+    padding: 0;
+}
+
+.info-card-transparent li {
+    margin-bottom: 1.5rem;
+}
+
+.info-card-transparent strong {
+    color: var(--accent);
+    display: block;
+    margin-bottom: 0.25rem;
+    font-size: 1rem;
+    font-weight: bold;
+}
+
+.info-card-transparent p {
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: rgba(255, 255, 255, 0.9);
+    margin: 0;
+}
+
+@media (max-width: 950px) {
+    .login-layout {
+        flex-direction: column;
+        align-items: center;
+        margin-top: 0;
+        /* Reset relative positioning if needed */
+        display: flex;
+    }
+
+    .login-card {
+        margin-bottom: 2rem;
+    }
+
+    .info-card-transparent {
+        position: static;
+        margin-left: 0;
+        width: 100%;
+        max-width: 450px;
+    }
 }
