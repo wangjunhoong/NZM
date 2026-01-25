@@ -320,7 +320,7 @@ function renderMatchHistory(gameList) {
 
     const filteredList = gameList.filter(g => {
         const mode = getModeByMapId(g.iMapId);
-        if (mode === '机甲') return false;
+        if (mode === '机甲战') return false;
         if (currentModeFilter === 'all') return true;
         return mode === currentModeFilter;
     });
@@ -443,8 +443,8 @@ function renderMatchDetail(data, container, mode) {
     const teammates = (data.list || []).filter(p => p.nickname !== self.nickname);
     teammates.sort((a, b) => (parseInt(b.baseDetail.iScore) || 0) - (parseInt(a.baseDetail.iScore) || 0));
 
-    // Hide extra stats for Tower Defense (塔防)
-    const showExtra = mode !== '塔防';
+    // Hide extra stats for Tower Defense (塔防战) and Time Hunting (时空追猎)
+    const showExtra = mode !== '塔防战' && mode !== '时空追猎';
 
     let html = '<div class="player-list">';
     teammates.forEach(p => {
