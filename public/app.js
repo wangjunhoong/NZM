@@ -762,5 +762,201 @@ async function loadFragments() {
     }
 }
 
+// --- Sidebar Toggle & Drag ---
+function initSidebar() {
+    const sidebar = document.getElementById('progress-sidebar');
+    const toggleBtn = document.getElementById('sidebar-toggle');
+    const dragHandle = document.getElementById('sidebar-drag-handle');
+
+    if (!sidebar || !toggleBtn) return;
+
+    // Restore collapsed state from localStorage
+    const isCollapsed = localStorage.getItem('sidebar_collapsed') === 'true';
+    if (isCollapsed) {
+        sidebar.classList.add('collapsed');
+    }
+
+    // Restore position from localStorage
+    const savedPos = localStorage.getItem('sidebar_position');
+    if (savedPos) {
+        try {
+            const pos = JSON.parse(savedPos);
+            sidebar.style.right = 'auto';
+            sidebar.style.top = 'auto';
+            sidebar.style.left = pos.left + 'px';
+            sidebar.style.top = pos.top + 'px';
+        } catch (e) { }
+    }
+
+    // Toggle functionality
+    toggleBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        sidebar.classList.add('collapsed');
+        localStorage.setItem('sidebar_collapsed', 'true');
+    });
+
+    // Track if we just finished dragging to prevent click-to-expand
+    let justDragged = false;
+
+    // Click collapsed ball to expand (only if not dragging)
+    sidebar.addEventListener('click', (e) => {
+        if (justDragged) {
+            justDragged = false;
+            return;
+        }
+        if (sidebar.classList.contains('collapsed')) {
+            sidebar.classList.remove('collapsed');
+            localStorage.setItem('sidebar_collapsed', 'false');
+        }
+    });
+
+    // Drag functionality
+    let isDragging = false;
+    let hasMoved = false;
+    let startX, startY, offsetX, offsetY;
+
+    const startDrag = (e) => {
+        // Only drag from header when expanded, or anywhere when collapsed
+        if (!sidebar.classList.contains('collapsed') && !e.target.closest('#sidebar-drag-handle')) {
+            return;
+        }
+        if (e.target.closest('#sidebar-toggle')) return;
+
+        isDragging = true;
+        hasMoved = false;
+        sidebar.classList.add('dragging');
+
+        const rect = sidebar.getBoundingClientRect();
+
+        if (e.type === 'touchstart') {
+            startX = e.touches[0].clientX;
+            startY = e.touches[0].clientY;
+        } else {
+            startX = e.clientX;
+            startY = e.clientY;
+        }
+
+        // Calculate offset from mouse position to element top-left corner
+        offsetX = startX - rect.left;
+        offsetY = startY - rect.top;
+
+        e.preventDefault();
+    };
+
+    const doDrag = (e) => {
+        if (!isDragging) return;
+
+        let clientX, clientY;
+        if (e.type === 'touchmove') {
+            clientX = e.touches[0].clientX;
+            clientY = e.touches[0].clientY;
+        } else {
+            clientX = e.clientX;
+            clientY = e.clientY;
+        }
+
+        // Check if moved enough to count as drag
+        if (Math.abs(clientX - startX) > 3 || Math.abs(clientY - startY) > 3) {
+            hasMoved = true;
+        }
+
+        // Calculate new position based on mouse position minus initial offset
+        let newLeft = clientX - offsetX;
+        let newTop = clientY - offsetY;
+
+        // Boundary constraints
+        const maxLeft = window.innerWidth - sidebar.offsetWidth;
+        const maxTop = window.innerHeight - sidebar.offsetHeight;
+
+        newLeft = Math.max(0, Math.min(newLeft, maxLeft));
+        newTop = Math.max(0, Math.min(newTop, maxTop));
+
+        sidebar.style.right = 'auto';
+        sidebar.style.left = newLeft + 'px';
+        sidebar.style.top = newTop + 'px';
+
+        e.preventDefault();
+    };
+
+    const endDrag = () => {
+        if (!isDragging) return;
+        isDragging = false;
+        sidebar.classList.remove('dragging');
+
+        // If we actually moved, set flag to prevent click expansion
+        if (hasMoved) {
+            justDragged = true;
+            // Reset after a short delay to allow future clicks
+            setTimeout(() => { justDragged = false; }, 100);
+        }
+
+        // Save position
+        const rect = sidebar.getBoundingClientRect();
+        localStorage.setItem('sidebar_position', JSON.stringify({
+            left: rect.left,
+            top: rect.top
+        }));
+    };
+
+    // Mouse events
+    dragHandle.addEventListener('mousedown', startDrag);
+    sidebar.addEventListener('mousedown', (e) => {
+        if (sidebar.classList.contains('collapsed')) startDrag(e);
+    });
+    document.addEventListener('mousemove', doDrag);
+    document.addEventListener('mouseup', endDrag);
+
+    // Touch events
+    dragHandle.addEventListener('touchstart', startDrag, { passive: false });
+    sidebar.addEventListener('touchstart', (e) => {
+        if (sidebar.classList.contains('collapsed')) startDrag(e);
+    }, { passive: false });
+    document.addEventListener('touchmove', doDrag, { passive: false });
+    document.addEventListener('touchend', endDrag);
+
+    // Handle window resize - keep sidebar within bounds
+    const keepInBounds = () => {
+        // Get the original saved position
+        const savedPos = localStorage.getItem('sidebar_position');
+        let targetLeft, targetTop;
+
+        if (savedPos) {
+            try {
+                const pos = JSON.parse(savedPos);
+                targetLeft = pos.left;
+                targetTop = pos.top;
+            } catch (e) {
+                targetLeft = window.innerWidth - sidebar.offsetWidth - 20;
+                targetTop = 80;
+            }
+        } else {
+            // Default position
+            targetLeft = window.innerWidth - sidebar.offsetWidth - 20;
+            targetTop = 80;
+        }
+
+        const maxLeft = window.innerWidth - sidebar.offsetWidth;
+        const maxTop = window.innerHeight - sidebar.offsetHeight;
+
+        // Clamp position to current window bounds
+        const newLeft = Math.max(0, Math.min(targetLeft, maxLeft));
+        const newTop = Math.max(0, Math.min(targetTop, maxTop));
+
+        sidebar.style.right = 'auto';
+        sidebar.style.left = newLeft + 'px';
+        sidebar.style.top = newTop + 'px';
+
+        // DO NOT save - keep original position in localStorage
+    };
+
+    window.addEventListener('resize', keepInBounds);
+
+    // Also check bounds on initial load
+    setTimeout(keepInBounds, 100);
+}
+
+// Initialize sidebar after DOM ready
+document.addEventListener('DOMContentLoaded', initSidebar);
+
 init();
 

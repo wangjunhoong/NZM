@@ -215,8 +215,13 @@
 
                     <!-- Fragment Progress Sidebar -->
                     <aside id="progress-sidebar" class="progress-sidebar">
-                        <h3>碎片进度</h3>
-                        <div id="fragment-list">
+                        <div class="sidebar-header" id="sidebar-drag-handle">
+                            <h3>碎片进度</h3>
+                            <button id="sidebar-toggle" class="sidebar-toggle-btn" title="缩小为浮动球">
+                                <span class="toggle-icon-minimize"></span>
+                            </button>
+                        </div>
+                        <div id="fragment-list" class="sidebar-content">
                             <p style="color:#888;font-size:0.9rem;">加载中...</p>
                         </div>
                     </aside>
