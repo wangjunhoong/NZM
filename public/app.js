@@ -305,9 +305,9 @@ const DIFF_NAME = { '0': '默认', '1': '引导', '2': '普通', '3': '困难', 
 
 function getModeByMapId(mapId) {
     const id = parseInt(mapId);
-    if ([12, 14, 21, 30, 112, 114, 115].includes(id)) return '僵尸猎场';
-    if ([300, 304, 308].includes(id)) return '塔防战'; /* Also update Tower Defense just in case */
-    if ([321, 322, 324].includes(id)) return '时空追猎';
+    if ([12, 14, 16, 17, 21, 30, 112, 114, 115].includes(id)) return '僵尸猎场';
+    if ([300, 304, 306, 308].includes(id)) return '塔防战';
+    if ([321, 322, 323, 324].includes(id)) return '时空追猎';
     if (id >= 1000) return '机甲战';
     return '未知';
 }
@@ -358,6 +358,10 @@ function renderStats(data) {
             if (m.includes('复活节')) img = 'https://nzm.playerhub.qq.com/playerhub/60106/maps/maps-12.png';
             if (m.includes('风暴')) img = 'https://nzm.playerhub.qq.com/playerhub/60106/maps/maps-1000.png';
             if (m.includes('根除')) img = 'https://nzm.playerhub.qq.com/playerhub/60106/maps/maps-321.png';
+            if (m.includes('昆仑神宫')) img = 'https://nzm.playerhub.qq.com/playerhub/60106/maps/maps-16.png';
+            if (m.includes('精绝古城')) img = 'https://nzm.playerhub.qq.com/playerhub/60106/maps/maps-17.png';
+            if (m.includes('联盟大厦')) img = 'https://nzm.playerhub.qq.com/playerhub/60106/maps/maps-306.png';
+            if (m.includes('猎杀南十字')) img = 'https://nzm.playerhub.qq.com/playerhub/60106/maps/maps-323.png';
         }
 
         const rate = total > 0 ? ((win / total) * 100).toFixed(0) : 0;
@@ -436,6 +440,10 @@ function renderMatchHistory(gameList) {
             else if (mapName.includes('复活节')) img = 'https://nzm.playerhub.qq.com/playerhub/60106/maps/maps-12.png';
             else if (mapName.includes('风暴')) img = 'https://nzm.playerhub.qq.com/playerhub/60106/maps/maps-1000.png';
             else if (mapName.includes('根除')) img = 'https://nzm.playerhub.qq.com/playerhub/60106/maps/maps-321.png';
+            else if (mapName.includes('昆仑神宫')) img = 'https://nzm.playerhub.qq.com/playerhub/60106/maps/maps-16.png';
+            else if (mapName.includes('精绝古城')) img = 'https://nzm.playerhub.qq.com/playerhub/60106/maps/maps-17.png';
+            else if (mapName.includes('联盟大厦')) img = 'https://nzm.playerhub.qq.com/playerhub/60106/maps/maps-306.png';
+            else if (mapName.includes('猎杀南十字')) img = 'https://nzm.playerhub.qq.com/playerhub/60106/maps/maps-323.png';
         }
 
         // Format Date: "01-25 15:13"
