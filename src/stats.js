@@ -36,13 +36,17 @@ const LOCAL_CONFIG = {
         "132": { "id": 132, "name": "飓风要塞-风暴行动--BOSS撕咬", "mode": "副本", "icon": "https://nzm.playerhub.qq.com/playerhub/60106/maps/maps-132.png" },
         "135": { "id": 135, "name": "太空电梯上/苍穹之上--BOSS护盾壁垒", "mode": "副本", "icon": "https://nzm.playerhub.qq.com/playerhub/60106/maps/maps-135.png" },
         "14": { "id": 14, "name": "大都会", "mode": "猎场", "icon": "https://nzm.playerhub.qq.com/playerhub/60106/maps/maps-14.png" },
+        "16": { "id": 16, "name": "昆仑神宫", "mode": "猎场", "icon": "https://nzm.playerhub.qq.com/playerhub/60106/maps/maps-16.png" },
+        "17": { "id": 17, "name": "精绝古城", "mode": "猎场", "icon": "https://nzm.playerhub.qq.com/playerhub/60106/maps/maps-17.png" },
         "21": { "id": 21, "name": "冰点源起", "mode": "猎场", "icon": "https://nzm.playerhub.qq.com/playerhub/60106/maps/maps-21.png" },
         "30": { "id": 30, "name": "猎场-新手关", "mode": "猎场", "icon": "https://nzm.playerhub.qq.com/playerhub/60106/maps/maps-30.png" },
         "300": { "id": 300, "name": "空间站", "mode": "塔防", "icon": "https://nzm.playerhub.qq.com/playerhub/60106/maps/maps-300.png" },
         "304": { "id": 304, "name": "20号星港", "mode": "塔防", "icon": "https://nzm.playerhub.qq.com/playerhub/60106/maps/maps-304.png" },
+        "306": { "id": 306, "name": "联盟大厦", "mode": "塔防", "icon": "https://nzm.playerhub.qq.com/playerhub/60106/maps/maps-306.png" },
         "308": { "id": 308, "name": "塔防-新手关", "mode": "塔防", "icon": "https://nzm.playerhub.qq.com/playerhub/60106/maps/maps-308.png" },
         "321": { "id": 321, "name": "根除变异", "mode": "时空追猎", "icon": "https://nzm.playerhub.qq.com/playerhub/60106/maps/maps-321.png" },
         "322": { "id": 322, "name": "夺回资料", "mode": "时空追猎", "icon": "https://nzm.playerhub.qq.com/playerhub/60106/maps/maps-322.png" },
+        "323": { "id": 323, "name": "猎杀南十字", "mode": "时空追猎", "icon": "https://nzm.playerhub.qq.com/playerhub/60106/maps/maps-323.png" },
         "324": { "id": 324, "name": "追猎-新手关", "mode": "时空追猎", "icon": "https://nzm.playerhub.qq.com/playerhub/60106/maps/maps-324.png" }
     }
 };

@@ -521,6 +521,71 @@ function formatNumber(num) {
     return (num || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
 
+function getQualityLabel(quality) {
+    switch (quality) {
+        case 4: return '传说';
+        case 3: return '史诗';
+        case 2: return '稀有';
+        default: return '普通';
+    }
+}
+
+function renderEquipmentScheme(equipmentScheme, playerId) {
+    if (!equipmentScheme || equipmentScheme.length === 0) return '';
+
+    const weaponsHtml = equipmentScheme.map(weapon => {
+        const weaponName = decodeURIComponent(weapon.weaponName || '');
+        const quality = weapon.quality || 1;
+        const qualityClass = `weapon-quality-${quality}`;
+        const qualityLabel = getQualityLabel(quality);
+        const qualityBadgeClass = quality === 4 ? 'badge-legendary' : quality === 3 ? 'badge-epic' : quality === 2 ? 'badge-rare' : 'badge-common';
+
+        // Render plugins
+        const pluginsHtml = (weapon.commonItems || []).map(plugin => {
+            const pluginName = decodeURIComponent(plugin.itemName || '');
+            return `
+                <div class="plugin-icon" title="${pluginName}">
+                    <img src="${plugin.pic}" alt="${pluginName}" loading="lazy" onerror="this.style.opacity='0.3'">
+                </div>
+            `;
+        }).join('');
+
+        return `
+            <div class="weapon-card ${qualityClass}">
+                <div class="weapon-image-container">
+                    <img src="${weapon.pic}" alt="${weaponName}" class="weapon-image" loading="lazy" onerror="this.style.opacity='0.3'">
+                    <span class="weapon-quality-badge ${qualityBadgeClass}">${qualityLabel}</span>
+                </div>
+                <div class="weapon-name" title="${weaponName}">${weaponName}</div>
+                <div class="plugin-grid">
+                    ${pluginsHtml}
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    return `
+        <div class="equipment-section" id="equipment-${playerId}">
+            <div class="equipment-header" onclick="toggleEquipment('${playerId}')">
+                <span class="equipment-header-title">本局配装</span>
+                <span class="equipment-toggle-icon">▼</span>
+            </div>
+            <div class="equipment-content">
+                <div class="equipment-grid">
+                    ${weaponsHtml}
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function toggleEquipment(playerId) {
+    const section = document.getElementById(`equipment-${playerId}`);
+    if (section) {
+        section.classList.toggle('expanded');
+    }
+}
+
 function renderMatchDetail(data, container, mode) {
     const self = data.loginUserDetail;
     const teammates = (data.list || []).filter(p => p.nickname !== self.nickname);
@@ -530,51 +595,59 @@ function renderMatchDetail(data, container, mode) {
     const showExtra = mode !== '塔防战' && mode !== '时空追猎';
 
     let html = '<div class="player-list">';
-    teammates.forEach(p => {
+    teammates.forEach((p, idx) => {
         const info = p.baseDetail;
         const hunt = p.huntingDetails || {};
-        const hasExtra = showExtra && (hunt.DamageTotalOnBoss > 0 || hunt.DamageTotalOnMobs > 0 || hunt.totalCoin > 0);
+        const hasExtra = showExtra && ((hunt.damageTotalOnBoss || hunt.DamageTotalOnBoss) > 0 || (hunt.damageTotalOnMobs || hunt.DamageTotalOnMobs) > 0 || hunt.totalCoin > 0);
+        const equipmentHtml = renderEquipmentScheme(p.equipmentScheme, `teammate-${idx}`);
         html += `
-            <div class="player-item">
-                <img src="${decodeURIComponent(p.avatar)}" class="player-avatar" onerror="this.src='images/maps-304.png'">
-                <div class="player-info">
-                    <div class="player-name">${decodeURIComponent(p.nickname)}</div>
-                    <div class="player-stats-grid">
-                        <div class="stat-group">
-                            <span>积分: ${formatNumber(info.iScore)}</span>
-                            <span>击杀: ${info.iKills}</span>
-                            <span>死亡: ${info.iDeaths}</span>
+            <div class="player-item" style="display:block;">
+                <div style="display:flex; align-items:center; gap:0.75rem;">
+                    <img src="${decodeURIComponent(p.avatar)}" class="player-avatar" onerror="this.src='images/maps-304.png'">
+                    <div class="player-info">
+                        <div class="player-name">${decodeURIComponent(p.nickname)}</div>
+                        <div class="player-stats-grid">
+                            <div class="stat-group">
+                                <span>积分: ${formatNumber(info.iScore)}</span>
+                                <span>击杀: ${info.iKills}</span>
+                                <span>死亡: ${info.iDeaths}</span>
+                            </div>
+                            ${hasExtra ? `
+                            <div class="stat-group extra">
+                                <span>Boss: ${formatNumber(hunt.damageTotalOnBoss || hunt.DamageTotalOnBoss || 0)}</span>
+                                <span>小怪: ${formatNumber(hunt.damageTotalOnMobs || hunt.DamageTotalOnMobs || 0)}</span>
+                                <span>金币: ${formatNumber(hunt.totalCoin || 0)}</span>
+                            </div>` : ''}
                         </div>
-                        ${hasExtra ? `
-                        <div class="stat-group extra">
-                            <span>Boss: ${formatNumber(hunt.DamageTotalOnBoss || 0)}</span>
-                            <span>小怪: ${formatNumber(hunt.DamageTotalOnMobs || 0)}</span>
-                            <span>金币: ${formatNumber(hunt.totalCoin || 0)}</span>
-                        </div>` : ''}
                     </div>
                 </div>
+                ${equipmentHtml}
             </div>`;
     });
     html += '</div>';
 
     const selfInfo = self.baseDetail;
     const selfHunt = self.huntingDetails || {};
+    const selfEquipmentHtml = renderEquipmentScheme(self.equipmentScheme, 'self');
     html += `
-        <div class="user-detail-row" style="margin-top:1rem; background:rgba(255,255,255,0.05); padding:1rem; border-radius:0.5rem; display:flex; gap:1rem; align-items:center;">
-             <div style="flex-shrink:0; text-align:center;">
-                <img src="${decodeURIComponent(self.avatar)}" style="width:50px; height:50px; border-radius:50%; border:2px solid var(--accent);">
-                <div style="font-weight:bold; margin-top:0.25rem;">${decodeURIComponent(self.nickname)}</div>
+        <div class="user-detail-row" style="margin-top:1rem; background:rgba(255,255,255,0.05); padding:1rem; border-radius:0.5rem;">
+            <div style="display:flex; gap:1rem; align-items:center; margin-bottom:${selfEquipmentHtml ? '1rem' : '0'};">
+                <div style="flex-shrink:0; text-align:center;">
+                    <img src="${decodeURIComponent(self.avatar)}" style="width:50px; height:50px; border-radius:50%; border:2px solid var(--accent);">
+                    <div style="font-weight:bold; margin-top:0.25rem;">${decodeURIComponent(self.nickname)}</div>
+                </div>
+                <div class="detail-grid" style="flex-grow:1; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));">
+                    <div class="detail-item"><div class="label">积分</div><div class="value">${formatNumber(selfInfo.iScore)}</div></div>
+                    <div class="detail-item"><div class="label">击杀</div><div class="value">${selfInfo.iKills}</div></div>
+                    <div class="detail-item"><div class="label">死亡</div><div class="value">${selfInfo.iDeaths}</div></div>
+                    ${showExtra ? `
+                    <div class="detail-item"><div class="label">Boss伤害</div><div class="value">${formatNumber(selfHunt.damageTotalOnBoss || selfHunt.DamageTotalOnBoss || 0)}</div></div>
+                    <div class="detail-item"><div class="label">小怪伤害</div><div class="value">${formatNumber(selfHunt.damageTotalOnMobs || selfHunt.DamageTotalOnMobs || 0)}</div></div>
+                    <div class="detail-item"><div class="label">金币</div><div class="value">${formatNumber(selfHunt.totalCoin || 0)}</div></div>
+                    ` : ''}
+                </div>
             </div>
-            <div class="detail-grid" style="flex-grow:1; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));">
-                <div class="detail-item"><div class="label">积分</div><div class="value">${formatNumber(selfInfo.iScore)}</div></div>
-                <div class="detail-item"><div class="label">击杀</div><div class="value">${selfInfo.iKills}</div></div>
-                <div class="detail-item"><div class="label">死亡</div><div class="value">${selfInfo.iDeaths}</div></div>
-                ${showExtra ? `
-                <div class="detail-item"><div class="label">Boss伤害</div><div class="value">${formatNumber(selfHunt.DamageTotalOnBoss || 0)}</div></div>
-                <div class="detail-item"><div class="label">小怪伤害</div><div class="value">${formatNumber(selfHunt.DamageTotalOnMobs || 0)}</div></div>
-                <div class="detail-item"><div class="label">金币</div><div class="value">${formatNumber(selfHunt.totalCoin || 0)}</div></div>
-                ` : ''}
-            </div>
+            ${selfEquipmentHtml}
         </div>`;
 
     container.innerHTML = html;
