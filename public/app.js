@@ -54,6 +54,141 @@ const state = {
     currentTab: 'stats'
 };
 
+// --- 登录方式切换 ---
+function switchLoginMethod(method) {
+    const qqBtn = document.getElementById('method-qq');
+    const wechatBtn = document.getElementById('method-wechat');
+    const qqContainer = document.getElementById('qr-login-container');
+    const wechatContainer = document.getElementById('wechat-login-container');
+
+    if (method === 'wechat') {
+        qqBtn.style.background = '#1f2937';
+        qqBtn.style.color = '#9ca3af';
+        qqBtn.classList.remove('active');
+        wechatBtn.style.background = '#10b981';
+        wechatBtn.style.color = '#fff';
+        wechatBtn.classList.add('active');
+        qqContainer.style.display = 'none';
+        wechatContainer.style.display = 'block';
+        // Stop QQ QR polling when switching to WeChat
+        if (qrTimer) { clearInterval(qrTimer); qrTimer = null; }
+        isQRPollingActive = false;
+        // Start WeChat QR login
+        startWxQRLogin();
+    } else {
+        wechatBtn.style.background = '#1f2937';
+        wechatBtn.style.color = '#9ca3af';
+        wechatBtn.classList.remove('active');
+        qqBtn.style.background = '#8b5cf6';
+        qqBtn.style.color = '#fff';
+        qqBtn.classList.add('active');
+        qqContainer.style.display = 'block';
+        wechatContainer.style.display = 'none';
+        // Stop WeChat QR polling when switching to QQ
+        if (wxQrTimer) { clearInterval(wxQrTimer); wxQrTimer = null; }
+        isWxQRPollingActive = false;
+    }
+}
+
+// --- WeChat QR Login ---
+let wxQrTimer = null;
+let wxQrUuid = '';
+let isWxQRPollingActive = false;
+let wxQrPollingInFlight = false; // Prevent overlapping requests
+
+async function startWxQRLogin() {
+    if (wxQrTimer) clearInterval(wxQrTimer);
+
+    const wxQrImg = document.getElementById('wx-qr-img');
+    const wxQrLoading = document.getElementById('wx-qr-loading');
+    const wxQrOverlay = document.getElementById('wx-qr-overlay');
+    const wxQrStatus = document.getElementById('wx-qr-status');
+
+    wxQrLoading.style.display = 'flex';
+    wxQrOverlay.style.display = 'none';
+    wxQrImg.style.display = 'none';
+    wxQrStatus.textContent = '正在获取微信二维码...';
+    wxQrStatus.style.color = '#aaa';
+
+    try {
+        const res = await fetch(`${API_BASE}/auth/wx-qr`);
+        const json = await res.json();
+
+        if (json.success) {
+            wxQrImg.src = json.data.qrcode;
+            wxQrUuid = json.data.uuid;
+
+            wxQrLoading.style.display = 'none';
+            wxQrImg.style.display = 'block';
+            wxQrStatus.textContent = '请使用微信扫码登录';
+
+            isWxQRPollingActive = true;
+            // Use longer interval since backend long-polls for up to 25s
+            wxQrTimer = setInterval(checkWxQR, 4000);
+        } else {
+            throw new Error(json.message || '获取二维码失败');
+        }
+    } catch (e) {
+        const wxQrStatus = document.getElementById('wx-qr-status');
+        wxQrStatus.textContent = '获取微信二维码失败，点击重试';
+        document.getElementById('wx-qr-overlay').style.display = 'flex';
+        document.getElementById('wx-qr-loading').style.display = 'none';
+    }
+}
+
+async function checkWxQR() {
+    if (!wxQrUuid) return;
+    if (wxQrPollingInFlight) return; // Skip if previous request still pending
+    wxQrPollingInFlight = true;
+
+    const wxQrStatus = document.getElementById('wx-qr-status');
+    const wxQrOverlay = document.getElementById('wx-qr-overlay');
+
+    try {
+        const res = await fetch(`${API_BASE}/auth/wx-check?uuid=${wxQrUuid}`);
+        const json = await res.json();
+
+        if (json.status === 0 && json.data?.cookie) {
+            // Login success
+            isWxQRPollingActive = false;
+            clearInterval(wxQrTimer);
+            wxQrTimer = null;
+            wxQrStatus.textContent = '登录成功！正在加载数据...';
+            wxQrStatus.style.color = '#10b981';
+
+            state.cookie = json.data.cookie;
+            localStorage.setItem('nzm_cookie', state.cookie);
+            localStorage.setItem('nzm_login_type', 'wechat');
+            loadStats();
+        } else if (json.status === -1 || json.success === false) {
+            // Code exchange failed
+            wxQrStatus.textContent = json.message || 'Token交换失败，请重试';
+            wxQrStatus.style.color = '#ef4444';
+            // Don't stop polling - let user retry with a new QR
+            isWxQRPollingActive = false;
+            clearInterval(wxQrTimer);
+            wxQrTimer = null;
+            wxQrOverlay.style.display = 'flex';
+        } else if (json.status === 408) {
+            wxQrStatus.textContent = '请使用微信扫码登录';
+            wxQrStatus.style.color = '#aaa';
+        } else if (json.status === 404) {
+            wxQrStatus.textContent = '扫码成功，请在手机上确认';
+            wxQrStatus.style.color = '#f59e0b';
+        } else if (json.status === 402) {
+            isWxQRPollingActive = false;
+            clearInterval(wxQrTimer);
+            wxQrTimer = null;
+            wxQrStatus.textContent = '二维码已失效';
+            wxQrOverlay.style.display = 'flex';
+        }
+    } catch (e) {
+        // ignore poll errors
+    } finally {
+        wxQrPollingInFlight = false;
+    }
+}
+
 // --- QQ群号弹窗 ---
 function showGroupPopup(groupName, groupNumber) {
     // 检查是否是已满的群
@@ -191,12 +326,20 @@ document.addEventListener('visibilitychange', () => {
             clearInterval(qrTimer);
             qrTimer = null;
         }
+        if (wxQrTimer) {
+            clearInterval(wxQrTimer);
+            wxQrTimer = null;
+        }
     } else {
         // Page is visible again, resume polling only if we were actively polling
         if (isQRPollingActive && qrSig && !qrTimer) {
             qrTimer = setInterval(checkQR, 3000);
             // Immediately check once when coming back
             checkQR();
+        }
+        if (isWxQRPollingActive && wxQrUuid && !wxQrTimer) {
+            wxQrTimer = setInterval(checkWxQR, 4000);
+            checkWxQR();
         }
     }
 });
@@ -277,8 +420,12 @@ async function checkQR() {
 function doLogout() {
     if (confirm('确定要退出登录并清除本地缓存吗？')) {
         localStorage.removeItem('nzm_cookie');
+        localStorage.removeItem('nzm_login_type');
         state.cookie = null;
+        state.collection = null;
         if (qrTimer) clearInterval(qrTimer);
+        if (wxQrTimer) clearInterval(wxQrTimer);
+        isWxQRPollingActive = false;
         switchView('login');
         startQRLogin();
     }
