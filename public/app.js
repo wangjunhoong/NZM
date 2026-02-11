@@ -192,7 +192,7 @@ async function checkWxQR() {
 // --- QQ群号弹窗 ---
 function showGroupPopup(groupName, groupNumber) {
     // 检查是否是已满的群
-    const isFullGroup = (groupName === '一群' || groupName === '二群' || groupName === '三群' || groupName === '四群' || groupName === '五群');
+    const isFullGroup = (groupName === '一群' || groupName === '二群' || groupName === '三群' || groupName === '四群' || groupName === '五群' || groupName === '六群');
     const displayNumber = isFullGroup ? '群已满人' : groupNumber;
     const numberColor = isFullGroup ? '#ef4444' : '#10b981';
 
