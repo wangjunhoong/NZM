@@ -71,7 +71,7 @@ async function fetchUserSummary(cookie) {
     try {
         const res = await fetch(API_URL, { method: 'POST', headers: { ...HEADERS, 'Cookie': cleanCookie }, body });
         const data = await res.json();
-        return data.jData?.data?.data || null;
+        return data; // Return full response to check iRet
     } catch (e) { return null; }
 }
 
@@ -172,11 +172,29 @@ export async function handleStats(request) {
     const cookie = request.headers.get('X-NZM-Cookie');
     if (!cookie) return new Response('Missing Cookie', { status: 401 });
 
-    const [summary, config, rawGames] = await Promise.all([
+    const [summaryRes, config, rawGames] = await Promise.all([
         fetchUserSummary(cookie),
         fetchConfig(cookie),
         fetchAllGames(cookie, 10)
     ]);
+
+    // Check Summary Response
+    if (!summaryRes || summaryRes.iRet !== 0) {
+        return new Response(JSON.stringify({
+            success: false,
+            message: 'Invalid Cookie'
+        }), { headers: { 'Content-Type': 'application/json' } });
+    }
+
+    const summary = summaryRes.jData?.data?.data;
+
+    // If request successful but no data, it means user hasn't agreed to protocol
+    if (!summary) {
+        return new Response(JSON.stringify({
+            success: false,
+            message: 'No Data'
+        }), { headers: { 'Content-Type': 'application/json' } });
+    }
 
     const mapInfo = { ...LOCAL_CONFIG.mapInfo, ...(config?.mapInfo || {}) };
     const diffInfo = { ...LOCAL_CONFIG.difficultyInfo, ...(config?.difficultyInfo || {}) };

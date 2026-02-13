@@ -1,6 +1,152 @@
 const API_BASE = '/api'; // Relative path for Worker
 // Placeholder for checkpoint area names (ID -> Name)
-const CHECKPOINT_AREAS = {};
+const CHECKPOINT_AREAS = {
+    "40014": "北欧森林",
+    "40101": "下水道",
+    "40104": "Z博士",
+    "40111": "下水道",
+    "40112": "博物馆",
+    "40113": "工厂",
+    "40121": "下水道",
+    "40122": "博物馆",
+    "40123": "工厂",
+    "40124": "Z博士",
+    "40131": "下水道",
+    "40132": "博物馆",
+    "40133": "工厂",
+    "40134": "Z博士",
+    "40141": "下水道",
+    "40142": "博物馆",
+    "40143": "工厂",
+    "40144": "Z博士",
+    "40151": "下水道",
+    "40152": "博物馆",
+    "40153": "工厂",
+    "40154": "Z博士",
+    "40211": "巴黎1区",
+    "40212": "巴黎2区",
+    "40213": "红磨坊",
+    "40221": "巴黎1区",
+    "40222": "巴黎2区",
+    "40223": "红磨坊",
+    "40224": "凯旋门",
+    "40231": "巴黎1区",
+    "40232": "巴黎2区",
+    "40233": "红磨坊",
+    "40234": "凯旋门",
+    "40235": "死亡骑士",
+    "40241": "巴黎1区",
+    "40242": "巴黎2区",
+    "40243": "红磨坊",
+    "40244": "凯旋门",
+    "40245": "死亡骑士",
+    "40251": "巴黎1区",
+    "40252": "巴黎2区",
+    "40253": "红磨坊",
+    "40254": "凯旋门",
+    "40255": "死亡骑士",
+    "40411": "海岸鸟居",
+    "40412": "城墙",
+    "40413": "日式街道",
+    "40414": "洞穴",
+    "40415": "城堡",
+    "40421": "海岸鸟居",
+    "40422": "城墙",
+    "40423": "日式街道",
+    "40424": "洞穴",
+    "40425": "城堡",
+    "40431": "海岸鸟居",
+    "40432": "城墙",
+    "40433": "日式街道",
+    "40434": "洞穴",
+    "40435": "城堡",
+    "40441": "海岸鸟居",
+    "40442": "城墙",
+    "40443": "日式街道",
+    "40444": "洞穴",
+    "40445": "城堡",
+    "40514": "北欧森林",
+    "40521": "北欧城市",
+    "40523": "地下实验室B",
+    "40524": "北欧森林",
+    "40529": "地下实验室",
+    "40531": "北欧城市",
+    "40532": "地下实验室A",
+    "40533": "地下实验室B",
+    "40534": "北欧森林",
+    "40535": "英灵殿",
+    "40539": "地下实验室",
+    "40541": "北欧城市",
+    "40542": "地下实验室A",
+    "40543": "地下实验室B",
+    "40544": "北欧森林",
+    "40545": "英灵殿",
+    "40549": "地下实验室",
+    "40551": "北欧城市",
+    "40552": "地下实验室A",
+    "40553": "地下实验室B",
+    "40554": "北欧森林",
+    "40555": "英灵殿",
+    "40559": "地下实验室",
+    "40561": "北欧城市",
+    "40562": "地下实验室A",
+    "40563": "地下实验室B",
+    "40564": "北欧森林",
+    "40565": "英灵殿",
+    "40569": "地下实验室",
+    "40611": "漂流",
+    "40612": "神庙",
+    "40621": "漂流",
+    "40622": "神庙",
+    "40623": "蛇王",
+    "40624": "食人花",
+    "40631": "漂流",
+    "40632": "神庙",
+    "40633": "蛇王",
+    "40634": "食人花",
+    "40635": "缇娜一阶段",
+    "40641": "漂流",
+    "40642": "神庙",
+    "40643": "蛇王",
+    "40644": "食人花",
+    "40645": "缇娜一阶段",
+    "40646": "缇娜二阶段",
+    "40711": "龙顶冰川",
+    "40712": "九层妖塔",
+    "40721": "龙顶冰川",
+    "40722": "九层妖塔",
+    "40724": "魔国祭坛",
+    "40731": "龙顶冰川",
+    "40732": "九层妖塔",
+    "40733": "记忆之城",
+    "40734": "魔国祭坛",
+    "40735": "逆转时间",
+    "40741": "龙顶冰川",
+    "40742": "九层妖塔",
+    "40743": "记忆之城",
+    "40744": "魔国祭坛",
+    "40745": "逆转时间",
+    "40811": "蚁后",
+    "40812": "白骆驼",
+    "40813": "黑蛇",
+    "40821": "蚁后",
+    "40822": "白骆驼",
+    "40823": "黑蛇",
+    "40824": "主教祭司",
+    "40825": "奴隶主",
+    "40831": "蚁后",
+    "40832": "白骆驼",
+    "40833": "黑蛇",
+    "40834": "主教祭司",
+    "40835": "奴隶主",
+    "40836": "精绝女王",
+    "40841": "蚁后",
+    "40842": "白骆驼",
+    "40843": "黑蛇",
+    "40844": "主教祭司",
+    "40845": "奴隶主",
+    "40846": "精绝女王"
+};
 
 const dom = {
     loginView: document.getElementById('login-view'),
@@ -419,17 +565,44 @@ async function checkQR() {
     }
 }
 
+function forceLogout() {
+    localStorage.removeItem('nzm_cookie');
+    localStorage.removeItem('nzm_login_type');
+    location.reload();
+}
+
+function showCookieExpiredModal() {
+    // Check if duplicate modal exists
+    if (document.querySelector('.cookie-expired-overlay')) return;
+
+    const overlay = document.createElement('div');
+    overlay.className = 'cookie-expired-overlay';
+
+    overlay.innerHTML = `
+        <div class="cookie-expired-modal">
+            <span class="cookie-expired-icon">⚠️</span>
+            <div class="cookie-expired-title">无法获取数据</div>
+            <div class="cookie-expired-text" style="text-align:left; display:inline-block; max-width:100%;">
+                <div style="margin-bottom:8px"><strong>可能原因：</strong></div>
+                <ul style="margin:0 0 12px 20px; padding:0; list-style-type:disc;">
+                    <li>登录凭证已过期 <span style="font-size:0.9em;color:#888">(重新登录即可)</span></li>
+                    <li><span style="color:#d4a84b">从未登录过官方小程序</span> (常见)</li>
+                </ul>
+                <div style="margin-bottom:8px"><strong>解决方案：</strong></div>
+                请前往手机QQ/微信搜索小程序<br>
+                <strong style="color:#d4a84b; font-size:1.1em;">“逆战未来工具箱”</strong><br>
+                进入并<span style="color:#10b981">同意用户协议</span>后，点击下方按钮重试。
+            </div>
+            <button class="cookie-expired-btn" onclick="forceLogout()" style="margin-top:1.5rem;">我已同意，重新登录</button>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+}
+
 function doLogout() {
     if (confirm('确定要退出登录并清除本地缓存吗？')) {
-        localStorage.removeItem('nzm_cookie');
-        localStorage.removeItem('nzm_login_type');
-        state.cookie = null;
-        state.collection = null;
-        if (qrTimer) clearInterval(qrTimer);
-        if (wxQrTimer) clearInterval(wxQrTimer);
-        isWxQRPollingActive = false;
-        switchView('login');
-        startQRLogin();
+        forceLogout();
     }
 }
 
@@ -449,9 +622,7 @@ async function loadStats() {
         if (res.status === 401) {
             localStorage.removeItem('nzm_cookie');
             state.cookie = null;
-            alert('登录状态已失效，请重新扫码登录');
-            switchView('login');
-            startQRLogin();
+            showCookieExpiredModal();
             return;
         }
 
@@ -464,7 +635,9 @@ async function loadStats() {
             loadFragments();
         } else {
             showError('数据获取失败: ' + (json.message || '未知错误'));
-            if (json.message === 'Missing Cookie') doLogout();
+            if (json.message === 'Missing Cookie' || json.message === 'Invalid Cookie' || json.message === 'No Data') {
+                showCookieExpiredModal();
+            }
         }
     } catch (e) {
         showError('请求失败: ' + e.message);
