@@ -145,6 +145,60 @@ button:hover {
     background: var(--accent-hover);
 }
 
+/* Login Layout */
+/* Login Layout */
+.login-layout {
+    display: flex;
+    gap: 1.5rem;
+    align-items: flex-start;
+    justify-content: center;
+    flex-wrap: wrap;
+    max-width: 1400px;
+    width: 100%;
+    padding: 0 1rem;
+}
+
+.security-warning-card {
+    position: absolute;
+    right: 100%;
+    top: 0;
+    margin-right: 2rem;
+    width: 320px;
+    background: rgba(0, 0, 0, 0.6) !important;
+    border: 1px solid rgba(239, 68, 68, 0.3) !important;
+    backdrop-filter: blur(10px);
+    padding: 1.5rem;
+    border-radius: 1rem;
+    color: #e5e7eb;
+    z-index: 10;
+}
+
+@media (max-width: 1200px) {
+    .security-warning-card {
+        position: static;
+        width: 100%;
+        margin-right: 0;
+        margin-bottom: 1.5rem;
+    }
+}
+
+.card.login-card {
+    flex: 1;
+    min-width: 260px;
+    max-width: 400px;
+}
+
+.info-card-transparent {
+    flex: 1;
+    min-width: 260px;
+    max-width: 400px;
+    background: rgba(0, 0, 0, 0.4);
+    padding: 1.5rem;
+    border-radius: 1rem;
+    color: #e5e7eb;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
 /* Navigation */
 /* Navigation */
 .navbar {
@@ -2250,7 +2304,9 @@ button:hover {
 
 .large-mode .compact-plugin-icon {
     margin-bottom: 0;
-}/* Cookie Expired Modal */
+}
+
+/* Cookie Expired Modal */
 .cookie-expired-overlay {
     position: fixed;
     top: 0;
@@ -2319,6 +2375,20 @@ button:hover {
     cursor: pointer;
     transition: transform 0.2s, box-shadow 0.2s;
     width: 100%;
+}
+
+@media (max-width: 900px) {
+    .login-layout {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .security-warning-card,
+    .card.login-card,
+    .info-card-transparent {
+        max-width: 100%;
+        width: 100%;
+    }
 }
 
 .cookie-expired-btn:hover {
