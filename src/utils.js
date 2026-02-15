@@ -22,3 +22,10 @@ export function getCookieValue(cookieStr, key) {
     const match = cookieStr.match(new RegExp(`(^| )${key}=([^;]+)`));
     return match ? match[2] : null;
 }
+export function getGTK(str) {
+    var hash = 5381;
+    for (var i = 0, len = str.length; i < len; ++i) {
+        hash += (hash << 5) + str.charCodeAt(i);
+    }
+    return hash & 0x7fffffff;
+}

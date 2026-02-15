@@ -69,10 +69,22 @@ async function fetchUserSummary(cookie) {
     const cleanCookie = normalizeCookie(cookie);
     const body = buildBody('center.user.stats', { seasonID: 1 });
     try {
+        console.log(`[Stats] Fetching user summary with cookie length: ${cleanCookie.length}`);
+        // console.log(`[Stats] Cookie: ${cleanCookie}`); // Caution: logs sensitive token
+
         const res = await fetch(API_URL, { method: 'POST', headers: { ...HEADERS, 'Cookie': cleanCookie }, body });
         const data = await res.json();
+
+        console.log(`[Stats] AMS Response iRet: ${data.iRet}`);
+        if (data.iRet !== 0) {
+            console.log(`[Stats] AMS Error Msg: ${data.sMsg}`);
+        }
+
         return data; // Return full response to check iRet
-    } catch (e) { return null; }
+    } catch (e) {
+        console.error(`[Stats] Fetch Error: ${e.message}`);
+        return null;
+    }
 }
 
 async function fetchGameList(cookie, page = 1) {
