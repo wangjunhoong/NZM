@@ -391,10 +391,10 @@ export async function handleWxCheck(request) {
 
         if (errcode === 405 && wxCode) {
             // User confirmed - exchange code for tokens
-            const result = await exchangeCode(wxCode, 'wx', 'wx3ec1209b02a24683');
+            const result = await exchangeCode(wxCode, 'wx', WX_APPID);
             if (result.success) {
                 const tokenData = result.data;
-                const cookie = `acctype=wx; openid=${tokenData.openid}; appid=wx3ec1209b02a24683; access_token=${tokenData.access_token}; refresh_token=${tokenData.refresh_token}`;
+                const cookie = `acctype=wx; openid=${tokenData.openid}; appid=${WX_APPID}; access_token=${tokenData.access_token}; refresh_token=${tokenData.refresh_token}`;
                 return new Response(JSON.stringify({
                     success: true, status: 0, message: '登录成功',
                     data: { cookie }
