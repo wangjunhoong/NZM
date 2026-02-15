@@ -1630,3 +1630,86 @@ document.addEventListener('DOMContentLoaded', () => {
 
 init();
 
+
+// --- Sponsor Logic ---
+const SPONSORS_LIST = [
+    "一***橙子🍊", "匿名大佬", "李**cc", "再*吧", "sn0***1ne25", "得*沃", "A**u", "可爱小***oro",
+    "盛", "夹*酱", "包*头", "*鹊", "CT**付", "重***城", "匿名大佬", "Ci**ue", "*~", "Z", "Un***tr",
+    "后***海", "^_^", "匿名大佬", "雾*酱", "罗*花", "不关**的事", "*白", "怯", "Fl***ed",
+    "向着***发", "*丁", "自*琦", "：", "李", "*心", "天*了", "當***雞", "do***73", "匿名大佬",
+    "*风", "*恋", "碌**为", "朴", "*博", "酒", "*壹", "除却***是云", "*染", "51*****73", "寻",
+    "灵宫****师傅", "X*N", "狴*锁", "赵*天", "匿名大佬", "裎", "靈", "匿名大佬", "邦***熊",
+    "匿名大佬", "C*", "Fo****en", "盒**猫"
+];
+let currentSponsorPage = 1;
+
+function renderSponsors() {
+    const listEl = document.getElementById('sponsor-list');
+    const pageEl = document.getElementById('sponsor-page-num');
+    const prevBtn = document.getElementById('prev-sponsor-btn');
+    const nextBtn = document.getElementById('next-sponsor-btn');
+
+
+    if (!listEl) return;
+
+    // About 24 items fit in 2 lines on desktop (12 per line)
+    const ITEMS_PER_PAGE = 24;
+    const totalPages = Math.ceil(SPONSORS_LIST.length / ITEMS_PER_PAGE);
+
+    if (currentSponsorPage < 1) currentSponsorPage = 1;
+    if (currentSponsorPage > totalPages) currentSponsorPage = totalPages;
+
+    const start = (currentSponsorPage - 1) * ITEMS_PER_PAGE;
+    const end = start + ITEMS_PER_PAGE;
+    const pageData = SPONSORS_LIST.slice(start, end);
+
+    let html = '';
+    pageData.forEach(name => {
+        html += `<span class="sponsor-badge">${name}</span> `;
+    });
+    listEl.innerHTML = html;
+
+    if (pageEl) pageEl.textContent = `${currentSponsorPage}/${totalPages}`;
+
+    if (prevBtn) {
+        prevBtn.disabled = currentSponsorPage <= 1;
+        prevBtn.style.opacity = prevBtn.disabled ? '0.5' : '1';
+        prevBtn.style.cursor = prevBtn.disabled ? 'not-allowed' : 'pointer';
+    }
+    if (nextBtn) {
+        nextBtn.disabled = currentSponsorPage >= totalPages;
+        nextBtn.style.opacity = nextBtn.disabled ? '0.5' : '1';
+        nextBtn.style.cursor = nextBtn.disabled ? 'not-allowed' : 'pointer';
+    }
+}
+
+function initSponsors() {
+    renderSponsors();
+
+    const prevBtn = document.getElementById('prev-sponsor-btn');
+    const nextBtn = document.getElementById('next-sponsor-btn');
+
+    if (prevBtn) {
+        prevBtn.addEventListener('click', () => {
+            if (currentSponsorPage > 1) {
+                currentSponsorPage--;
+                renderSponsors();
+            }
+        });
+    }
+
+    if (nextBtn) {
+        nextBtn.addEventListener('click', () => {
+            // Sync with renderSponsors - 24 items
+            const ITEMS_PER_PAGE = 24;
+            const totalPages = Math.ceil(SPONSORS_LIST.length / ITEMS_PER_PAGE);
+            if (currentSponsorPage < totalPages) {
+                currentSponsorPage++;
+                renderSponsors();
+            }
+        });
+    }
+}
+
+// Call initSponsors when DOM is loaded, or append to init
+document.addEventListener('DOMContentLoaded', initSponsors);
