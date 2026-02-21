@@ -665,16 +665,19 @@ async function calculateRecentBossDamage(gameList) {
         return;
     }
 
-    // Fetch all hunt games
-    const gamesToFetch = huntGames;
+    // Fetch a maximum of 10 games to avoid Cloudflare Workers subrequest / timeout limits
+    // while providing a meaningful fast sample.
+    const gamesToFetch = huntGames.slice(0, 10);
     let totalBossDmg = 0;
     let validCount = 0;
 
     if (dom.recentBossDmg) dom.recentBossDmg.textContent = '计算中...';
 
+    const delay = ms => new Promise(res => setTimeout(res, ms));
+
     try {
-        // Fetch in batches of 10 to avoid overwhelming the server concurrently
-        const batchSize = 10;
+        // Fetch in batches of 5 to avoid overwhelming the server concurrently
+        const batchSize = 5;
         for (let i = 0; i < gamesToFetch.length; i += batchSize) {
             const batch = gamesToFetch.slice(i, i + batchSize);
             const promises = batch.map(g => fetch(`${API_BASE}/detail?room_id=${g.DsRoomId}`, {
@@ -692,6 +695,11 @@ async function calculateRecentBossDamage(gameList) {
                     }
                 }
             });
+
+            // Small delay between batches to avoid rate limits
+            if (i + batchSize < gamesToFetch.length) {
+                await delay(300);
+            }
         }
 
         let avg = 0;
@@ -1832,7 +1840,11 @@ async function generateShareImage() {
             // 0.5 Wait for Boss Damage Calculation if pending
             if (state.bossDamagePromise) {
                 btn.textContent = '计算伤害...';
-                await state.bossDamagePromise;
+                try {
+                    await state.bossDamagePromise;
+                } catch (err) {
+                    console.warn('Wait for boss damage calculation failed', err);
+                }
                 btn.textContent = '生成排版...';
             }
 
@@ -2045,7 +2057,7 @@ async function generateShareImage() {
             drawText('场均综合伤害', 90, 705 + startYOffset, 20, '#9ca3af', 'left');
             drawText(avgDmg, 90, 755 + startYOffset, 32, '#ffffff', 'left', 'bold');
 
-            drawText('场均Boss伤害', 440, 705 + startYOffset, 20, '#9ca3af', 'left');
+            drawText('场均Boss伤害 (近10场)', 440, 705 + startYOffset, 16, '#9ca3af', 'left');
             drawText(avgBossDmg, 440, 755 + startYOffset, 32, '#ffffff', 'left', 'bold');
 
             // --- C. Top Maps ---
