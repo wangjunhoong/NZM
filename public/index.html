@@ -179,6 +179,8 @@
                 </div>
                 <div class="actions">
                     <span id="user-info"></span>
+                    <button id="share-btn"
+                        style="background:#fbbf24; color:#000; font-weight:bold; border-color:#d97706;">生成分享图</button>
                     <button id="refresh-btn">刷新状态</button>
                     <button id="logout-btn">解除同步</button>
                 </div>
@@ -252,14 +254,19 @@
                             <!-- Official Stats Section -->
                             <h2 class="section-title" style="margin-top: 0;">官方历史数据 <small
                                     style="font-size:0.6em;color:#bbb;font-weight:normal">（不包含机甲/PVP）</small></h2>
-                            <section class="summary-section official-stats">
+                            <section class="summary-section official-stats"
+                                style="grid-template-columns: repeat(3, 1fr);">
                                 <div class="stat-card summary-card">
-                                    <h3>历史总场次</h3>
-                                    <div class="value" id="off-total-games">-</div>
+                                    <h3>猎场总场次</h3>
+                                    <div class="value" id="off-hunt-games">-</div>
+                                </div>
+                                <div class="stat-card summary-card">
+                                    <h3>塔防总场次</h3>
+                                    <div class="value" id="off-tower-games">-</div>
                                 </div>
                                 <div class="stat-card summary-card">
                                     <h3>历史总时长</h3>
-                                    <div class="value" id="off-total-time">-</div>
+                                    <div class="value" id="off-play-time">-</div>
                                 </div>
                             </section>
 
@@ -276,8 +283,12 @@
                                     <div class="value" id="recent-win-rate">-</div>
                                 </div>
                                 <div class="stat-card summary-card">
-                                    <h3>场均伤害</h3>
+                                    <h3>场均综合评分</h3>
                                     <div class="value" id="recent-avg-damage">-</div>
+                                </div>
+                                <div class="stat-card summary-card">
+                                    <h3>场均Boss伤害</h3>
+                                    <div class="value" id="recent-boss-damage">-</div>
                                 </div>
                             </section>
 

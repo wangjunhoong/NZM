@@ -159,6 +159,7 @@ const dom = {
 
     userInfo: document.getElementById('user-info'),
     refreshBtn: document.getElementById('refresh-btn'),
+    shareBtn: document.getElementById('share-btn'),
     logoutBtn: document.getElementById('logout-btn'),
     loading: document.getElementById('loading'),
     errorMsg: document.getElementById('error-msg'),
@@ -187,12 +188,14 @@ const dom = {
     trapCount: document.getElementById('trap-count'),
     pluginCount: document.getElementById('plugin-count'),
 
-    // Overview
-    gameCount: document.getElementById('off-total-games'),
-    playTime: document.getElementById('off-total-time'),
+    // Official Summary
+    offHuntGames: document.getElementById('off-hunt-games'),
+    offTowerGames: document.getElementById('off-tower-games'),
+    offPlayTime: document.getElementById('off-play-time'),
     recentGames: document.getElementById('recent-games'),
     recentWin: document.getElementById('recent-win-rate'),
     recentDmg: document.getElementById('recent-avg-damage'),
+    recentBossDmg: document.getElementById('recent-boss-damage'),
 };
 
 const state = {
@@ -409,6 +412,7 @@ async function init() {
 
 function bindEvents() {
     dom.refreshBtn.addEventListener('click', loadStats);
+    if (dom.shareBtn) dom.shareBtn.addEventListener('click', generateShareImage);
     dom.logoutBtn.addEventListener('click', doLogout);
 
     dom.qrOverlay.addEventListener('click', startQRLogin);
@@ -633,6 +637,8 @@ async function loadStats() {
             dom.statsContent.classList.remove('hidden');
             // Load fragment progress in sidebar
             loadFragments();
+            // Async calc boss damage (fetch all hunt games)
+            state.bossDamagePromise = calculateRecentBossDamage(json.data.gameList);
         } else {
             showError('数据获取失败: ' + (json.message || '未知错误'));
             if (json.message === 'Missing Cookie' || json.message === 'Invalid Cookie' || json.message === 'No Data') {
@@ -643,6 +649,63 @@ async function loadStats() {
         showError('请求失败: ' + e.message);
     } finally {
         dom.loading.classList.add('hidden');
+    }
+}
+
+async function calculateRecentBossDamage(gameList) {
+    if (!gameList || !gameList.length) {
+        if (dom.recentBossDmg) dom.recentBossDmg.textContent = '-';
+        return;
+    }
+
+    // filter for 猎场 games (usually mapId 12, 14, 16, 17, 21, 112, 114, 115)
+    const huntGames = gameList.filter(g => g.modeName && g.modeName.includes('猎场'));
+    if (huntGames.length === 0) {
+        if (dom.recentBossDmg) dom.recentBossDmg.textContent = '-';
+        return;
+    }
+
+    // Fetch all hunt games
+    const gamesToFetch = huntGames;
+    let totalBossDmg = 0;
+    let validCount = 0;
+
+    if (dom.recentBossDmg) dom.recentBossDmg.textContent = '计算中...';
+
+    try {
+        // Fetch in batches of 10 to avoid overwhelming the server concurrently
+        const batchSize = 10;
+        for (let i = 0; i < gamesToFetch.length; i += batchSize) {
+            const batch = gamesToFetch.slice(i, i + batchSize);
+            const promises = batch.map(g => fetch(`${API_BASE}/detail?room_id=${g.DsRoomId}`, {
+                headers: { 'X-NZM-Cookie': state.cookie }
+            }).then(r => r.json()).catch(() => null));
+
+            const results = await Promise.all(promises);
+            results.forEach(res => {
+                if (res && res.success && res.data && res.data.loginUserDetail) {
+                    const huntInfo = res.data.loginUserDetail.huntingDetails || {};
+                    const dmg = parseInt(huntInfo.damageTotalOnBoss || huntInfo.DamageTotalOnBoss || 0);
+                    if (dmg >= 0 && !isNaN(dmg)) {
+                        totalBossDmg += dmg;
+                        validCount++;
+                    }
+                }
+            });
+        }
+
+        let avg = 0;
+        if (validCount > 0) avg = Math.floor(totalBossDmg / validCount);
+
+        // Store for share canvas
+        if (state.data) state.data.calcAvgBossDamage = avg;
+
+        if (dom.recentBossDmg) {
+            dom.recentBossDmg.textContent = avg > 0 ? formatNumber(avg) : '0';
+        }
+    } catch (e) {
+        console.warn('Failed to calculate recent boss damage', e);
+        if (dom.recentBossDmg) dom.recentBossDmg.textContent = '获取失败';
     }
 }
 
@@ -694,9 +757,15 @@ function getModeByMapId(mapId) {
 }
 
 function renderStats(data) {
-    // Fill Summary
-    dom.gameCount.textContent = data.officialSummary?.huntGameCount || '-';
-    dom.playTime.textContent = data.officialSummary?.playtime ? `${Math.floor(data.officialSummary.playtime / 60)}时` : '-';
+    // 1. Official Summary
+    const os = data.officialSummary || {};
+    const huntGames = os.huntGameCount || '-';
+    const towerGames = os.towerGameCount || '-';
+    let playTime = os.playtime ? `${Math.floor(os.playtime / 60)}时` : '-'; // Use os.playtime directly
+
+    if (dom.offHuntGames) dom.offHuntGames.textContent = huntGames;
+    if (dom.offTowerGames) dom.offTowerGames.textContent = towerGames;
+    if (dom.offPlayTime) dom.offPlayTime.textContent = playTime;
 
     dom.recentGames.textContent = data.totalGames;
     dom.recentWin.textContent = data.winRate + '%';
@@ -1723,3 +1792,339 @@ function initSponsors() {
 
 // Call initSponsors when DOM is loaded, or append to init
 document.addEventListener('DOMContentLoaded', initSponsors);
+
+// --- Share Stats (Canvas) ---
+async function generateShareImage() {
+    if (!state.data) {
+        alert('暂无战绩数据可供分享，请先绑定账号。');
+        return;
+    }
+
+    const btn = dom.shareBtn;
+    if (btn) {
+        btn.disabled = true;
+        const originalText = btn.textContent;
+        btn.textContent = '生成中...';
+
+        try {
+            const d = state.data;
+
+            // 0. Fetch User Info from latest match
+            let nickname = '指挥官';
+            let avatarUrl = '';
+
+            if (d.gameList && d.gameList.length > 0) {
+                try {
+                    const roomId = d.gameList[0].DsRoomId;
+                    const res = await fetch(`${API_BASE}/detail?room_id=${roomId}`, {
+                        headers: { 'X-NZM-Cookie': state.cookie }
+                    });
+                    const detailData = await res.json();
+                    if (detailData.success && detailData.data && detailData.data.loginUserDetail) {
+                        nickname = decodeURIComponent(detailData.data.loginUserDetail.nickname) || '指挥官';
+                        avatarUrl = decodeURIComponent(detailData.data.loginUserDetail.avatar) || '';
+                    }
+                } catch (err) {
+                    console.warn('Failed to fetch latest match detail for user info', err);
+                }
+            }
+
+            // 0.5 Wait for Boss Damage Calculation if pending
+            if (state.bossDamagePromise) {
+                btn.textContent = '计算伤害...';
+                await state.bossDamagePromise;
+                btn.textContent = '生成排版...';
+            }
+
+            // 1. Prepare Data
+            const avgDmg = formatNumber(d.avgDamage) || '0';
+            const avgBossDmg = d.calcAvgBossDamage > 0 ? formatNumber(d.calcAvgBossDamage) : '-';
+            const winRate = d.winRate + '%';
+            const totalGames = d.totalGames || 0;
+            const huntGames = d.officialSummary?.huntGameCount || '-';
+            const playTime = d.officialSummary?.playtime ? Math.floor(d.officialSummary.playtime / 60) + '时' : '-';
+
+            // All Maps
+            let mapArr = [];
+            if (d.mapStats) {
+                for (const [mName, diffs] of Object.entries(d.mapStats)) {
+                    let mTotal = 0;
+                    let mWin = 0;
+                    for (const v of Object.values(diffs)) {
+                        mTotal += v.total;
+                        mWin += v.win;
+                    }
+                    mapArr.push({ name: mName, total: mTotal, win: mWin });
+                }
+            }
+            mapArr.sort((a, b) => b.total - a.total);
+            const allMaps = mapArr; // Render all map stats
+
+            // Calculate Dynamic Height
+            const hasAvatar = !!avatarUrl;
+            const startYOffset = hasAvatar ? 30 : 0;
+            const mapRows = Math.ceil(allMaps.length / 2);
+            const mapsAreaHeight = mapRows * 140;
+            const width = 800;
+            const startMapsY = 850 + startYOffset;
+            const footerY = startMapsY + Math.max(mapsAreaHeight, 60) + 40;
+            const height = footerY + 80;
+
+            // 2. Setup Canvas
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = width;
+            canvas.height = height;
+
+            // Helper to get map image
+            const getMapImg = (mName) => {
+                const found = d.gameList.find(g => g.mapName === mName && g.icon);
+                if (found) return found.icon;
+                let img = 'images/maps-304.png';
+                if (mName.includes('大都会')) img = 'https://nzm.playerhub.qq.com/playerhub/60106/maps/maps-14.png';
+                else if (mName.includes('复活节')) img = 'https://nzm.playerhub.qq.com/playerhub/60106/maps/maps-12.png';
+                else if (mName.includes('风暴')) img = 'https://nzm.playerhub.qq.com/playerhub/60106/maps/maps-1000.png';
+                else if (mName.includes('根除')) img = 'https://nzm.playerhub.qq.com/playerhub/60106/maps/maps-321.png';
+                else if (mName.includes('昆仑神宫')) img = 'https://nzm.playerhub.qq.com/playerhub/60106/maps/maps-16.png';
+                else if (mName.includes('精绝古城')) img = 'https://nzm.playerhub.qq.com/playerhub/60106/maps/maps-17.png';
+                else if (mName.includes('联盟大厦')) img = 'https://nzm.playerhub.qq.com/playerhub/60106/maps/maps-306.png';
+                else if (mName.includes('猎杀南十字')) img = 'https://nzm.playerhub.qq.com/playerhub/60106/maps/maps-323.png';
+                return img;
+            };
+
+            // 3. Load Images
+            // Collect main background completely random
+            const bgPool = [
+                'https://nzm.playerhub.qq.com/playerhub/60106/maps/maps-14.png',
+                'https://nzm.playerhub.qq.com/playerhub/60106/maps/maps-12.png',
+                'https://nzm.playerhub.qq.com/playerhub/60106/maps/maps-1000.png',
+                'https://nzm.playerhub.qq.com/playerhub/60106/maps/maps-321.png',
+                'https://nzm.playerhub.qq.com/playerhub/60106/maps/maps-16.png',
+                'https://nzm.playerhub.qq.com/playerhub/60106/maps/maps-17.png',
+                'https://nzm.playerhub.qq.com/playerhub/60106/maps/maps-306.png',
+                'https://nzm.playerhub.qq.com/playerhub/60106/maps/maps-323.png'
+            ];
+            if (d.gameList) {
+                d.gameList.forEach(g => { if (g.icon && !bgPool.includes(g.icon)) bgPool.push(g.icon); });
+            }
+            const randomBg = bgPool[Math.floor(Math.random() * bgPool.length)] || 'images/maps-304.png';
+
+            const imageLoads = [];
+            const mapImages = [];
+
+            allMaps.forEach((m, i) => {
+                const imgObj = new Image();
+                imgObj.crossOrigin = 'anonymous';
+                const p = new Promise(res => {
+                    imgObj.onload = () => { mapImages[i] = imgObj; res(); };
+                    imgObj.onerror = () => { mapImages[i] = null; res(); };
+                    imgObj.src = getMapImg(m.name);
+                });
+                imageLoads.push(p);
+            });
+
+            const bgImg = new Image();
+            bgImg.crossOrigin = 'anonymous';
+            imageLoads.push(new Promise(res => {
+                bgImg.onload = res;
+                bgImg.onerror = res;
+                bgImg.src = randomBg;
+            }));
+
+            // Load Avatar
+            const avatarImg = new Image();
+            avatarImg.crossOrigin = 'anonymous'; // Important for CORS
+            if (avatarUrl) {
+                imageLoads.push(new Promise(res => {
+                    avatarImg.onload = () => { res(); };
+                    avatarImg.onerror = () => { res(); };
+                    avatarImg.src = avatarUrl;
+                }));
+            }
+
+            await Promise.all(imageLoads);
+
+            // 4. Draw Background & Overlay
+            ctx.fillStyle = '#111827';
+            ctx.fillRect(0, 0, width, height);
+
+            if (bgImg.width > 0) {
+                const scale = Math.max(width / bgImg.width, height / bgImg.height);
+                const w = bgImg.width * scale;
+                const h = bgImg.height * scale;
+                const x = (width - w) / 2;
+                const y = (height - h) / 2;
+                ctx.drawImage(bgImg, x, y, w, h);
+            }
+
+            // Dark Overlay for readability
+            ctx.fillStyle = 'rgba(17, 24, 39, 0.85)';
+            ctx.fillRect(0, 0, width, height);
+
+            // 5. Draw Content Helpers
+            const drawText = (text, x, y, size, color = '#ffffff', align = 'left', weight = 'normal', family = 'sans-serif') => {
+                ctx.font = `${weight} ${size}px ${family}`;
+                ctx.fillStyle = color;
+                ctx.textAlign = align;
+                ctx.fillText(text, x, y);
+            };
+            const drawCard = (x, y, w, h) => {
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.roundRect(x, y, w, h, 16);
+                ctx.fill();
+                ctx.stroke();
+            };
+
+            // Title Area (Avatar + Nickname)
+            if (hasAvatar && avatarImg.width > 0) {
+                // Draw Avatar (Circular)
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(400, 100, 50, 0, Math.PI * 2);
+                ctx.closePath();
+                ctx.clip();
+                ctx.drawImage(avatarImg, 350, 50, 100, 100);
+                ctx.restore();
+
+                // Draw Avatar Border
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(400, 100, 50, 0, Math.PI * 2);
+                ctx.lineWidth = 4;
+                ctx.strokeStyle = '#fbbf24';
+                ctx.stroke();
+                ctx.restore();
+
+                drawText(nickname, width / 2, 200, 44, '#ffffff', 'center', 'bold');
+            } else {
+                drawText(nickname, width / 2, 160, 56, '#ffffff', 'center', 'bold');
+            }
+
+            const towerGames = d.officialSummary?.towerGameCount || '-';
+            // --- A. Base Stats Card ---
+            drawText('官 方 历 史 数 据', 60, 260 + startYOffset, 28, '#fbbf24', 'left', 'bold');
+            drawText('(不包含机甲/PVP)', 290, 260 + startYOffset, 20, '#9ca3af', 'left');
+
+            // Render 3 cards side by side
+            // 800 width. Margins: 60 left, 60 right. Total width 680 to fill.
+            // 3 cars -> width: 213. Gap: 20 -> 213*3 + 40 = 679.
+            const baseCardW = 213;
+            drawCard(60, 290 + startYOffset, baseCardW, 140);
+            drawCard(60 + baseCardW + 20, 290 + startYOffset, baseCardW, 140);
+            drawCard(60 + (baseCardW + 20) * 2, 290 + startYOffset, baseCardW, 140);
+
+            drawText('猎场总场次', 80, 335 + startYOffset, 18, '#9ca3af', 'left');
+            drawText(huntGames.toString(), 80, 395 + startYOffset, 42, '#ffffff', 'left', 'bold');
+
+            drawText('塔防总场次', 80 + baseCardW + 20, 335 + startYOffset, 18, '#9ca3af', 'left');
+            drawText(towerGames.toString(), 80 + baseCardW + 20, 395 + startYOffset, 42, '#ffffff', 'left', 'bold');
+
+            drawText('历史总时长', 80 + (baseCardW + 20) * 2, 335 + startYOffset, 18, '#9ca3af', 'left');
+            drawText(playTime, 80 + (baseCardW + 20) * 2, 395 + startYOffset, 42, '#ffffff', 'left', 'bold');
+
+            // --- B. Recent Stats Card (2x2 Grid) ---
+            drawText('近 期 战 绩 统 计', 60, 490 + startYOffset, 28, '#fbbf24', 'left', 'bold');
+            drawText(`(最近 ${totalGames} 场)`, 290, 490 + startYOffset, 20, '#9ca3af', 'left');
+
+            // Row 1
+            drawCard(60, 520 + startYOffset, 330, 120);
+            drawCard(410, 520 + startYOffset, 330, 120);
+            // Row 2
+            drawCard(60, 660 + startYOffset, 330, 120);
+            drawCard(410, 660 + startYOffset, 330, 120);
+
+            drawText('近期场次', 90, 565 + startYOffset, 20, '#9ca3af', 'left');
+            drawText(totalGames.toString(), 90, 615 + startYOffset, 38, '#ffffff', 'left', 'bold');
+
+            drawText('近期通关率', 440, 565 + startYOffset, 20, '#9ca3af', 'left');
+            drawText(winRate, 440, 615 + startYOffset, 38, '#ffffff', 'left', 'bold');
+
+            drawText('场均综合伤害', 90, 705 + startYOffset, 20, '#9ca3af', 'left');
+            drawText(avgDmg, 90, 755 + startYOffset, 32, '#ffffff', 'left', 'bold');
+
+            drawText('场均Boss伤害', 440, 705 + startYOffset, 20, '#9ca3af', 'left');
+            drawText(avgBossDmg, 440, 755 + startYOffset, 32, '#ffffff', 'left', 'bold');
+
+            // --- C. Top Maps ---
+            // (startMapsY already calculated)
+            drawText('地 图 统 计', 60, 820 + startYOffset, 28, '#fbbf24', 'left', 'bold');
+
+            if (allMaps.length > 0) {
+                allMaps.forEach((m, idx) => {
+                    const row = Math.floor(idx / 2);
+                    const col = idx % 2;
+                    const startX = 60 + col * 350; // 330 card + 20 gap = 350
+                    const startY = startMapsY + row * 140;
+
+                    // Draw map card background
+                    const mImg = mapImages[idx];
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.roundRect(startX, startY, 330, 120, 12);
+                    ctx.clip();
+                    if (mImg && mImg.width > 0) {
+                        // scale to fill 330x120
+                        const bgScale = Math.max(330 / mImg.width, 120 / mImg.height);
+                        const bw = mImg.width * bgScale;
+                        const bh = mImg.height * bgScale;
+                        const bx = startX + (330 - bw) / 2;
+                        const by = startY + (120 - bh) / 2;
+                        ctx.drawImage(mImg, bx, by, bw, bh);
+                    } else {
+                        ctx.fillStyle = '#1f2937';
+                        ctx.fill();
+                    }
+
+                    // Dark gradient overlay
+                    const grad = ctx.createLinearGradient(startX, startY, startX, startY + 120);
+                    grad.addColorStop(0, 'rgba(0,0,0,0.1)');
+                    grad.addColorStop(1, 'rgba(0,0,0,0.85)');
+                    ctx.fillStyle = grad;
+                    ctx.fillRect(startX, startY, 330, 120);
+                    ctx.restore();
+
+                    // Texts inside card
+                    drawText(m.name, startX + 20, startY + 40, 22, '#ffffff', 'left', 'bold');
+
+                    const wr = m.total > 0 ? ((m.win / m.total) * 100).toFixed(1) : 0;
+
+                    // Put Win Rate prominently on the right
+                    drawText(`${wr}%`, startX + 310, startY + 95, 24, '#fbbf24', 'right', 'bold');
+
+                    // Stats on Left
+                    ctx.font = 'bold 26px sans-serif';
+                    const totalWidth = ctx.measureText(m.total.toString()).width;
+                    drawText(`${m.total}`, startX + 20, startY + 75, 26, '#ffffff', 'left', 'bold');
+                    drawText(`场`, startX + 25 + totalWidth, startY + 73, 14, '#9ca3af', 'left');
+
+                    drawText(`胜 ${m.win} · 负 ${m.total - m.win}`, startX + 20, startY + 105, 18, '#d1d5db', 'left');
+                });
+            } else {
+                drawText('暂无地图数据', width / 2, startMapsY + 40, 24, '#6b7280', 'center');
+            }
+
+            // Footer & Watermark
+            const date = new Date();
+            const dateString = `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`;
+            drawText(`生成于 ${dateString} · by HaMan`, width / 2, footerY, 20, '#6b7280', 'center');
+            drawText('数据来源 · 逆战未来工具箱小程序', width / 2, footerY + 30, 22, '#4b5563', 'center', 'bold');
+
+            // 6. Output Image
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+            const link = document.createElement('a');
+            link.download = `战绩汇总_${date.getTime()}.jpg`;
+            link.href = dataUrl;
+            link.click();
+
+        } catch (e) {
+            console.error('生成图片失败', e);
+            alert('生成长图时发生错误，请重试。\n' + e.message);
+        } finally {
+            btn.disabled = false;
+            btn.textContent = originalText;
+        }
+    }
+}
