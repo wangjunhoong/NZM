@@ -1,6 +1,6 @@
 {
   "name": "nzm-stats-worker",
-  "entry": "./index.js",
+  "entry": "./src/index.js",
   "installCommand": "npm install",
   "buildCommand": "",
   "assets": {
