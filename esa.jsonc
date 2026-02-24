@@ -1,0 +1,10 @@
+{
+  "name": "nzm-stats-worker",
+  "entry": "./index.js",
+  "installCommand": "npm install",
+  "buildCommand": "",
+  "assets": {
+    "directory": "./dist",
+    "notFoundStrategy": "singlePageApplication"
+  }
+}
